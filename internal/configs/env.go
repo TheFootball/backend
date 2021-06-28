@@ -8,7 +8,9 @@ import (
 )
 
 type Env struct {
-	DYNAMODB string
+	DYNAMODB   string
+	REDIS_ADDR string
+	REDIS_PW   string
 }
 
 var env *Env
@@ -25,7 +27,9 @@ func GetEnv() *Env {
 	}
 
 	env = &Env{
-		DYNAMODB: os.Getenv("DYNAMODB"),
+		DYNAMODB:   os.Getenv("DYNAMODB"),
+		REDIS_ADDR: os.Getenv("REDIS_ADDRESS"),
+		REDIS_PW:   os.Getenv("REDIS_PASSWORD"),
 	}
 
 	return env

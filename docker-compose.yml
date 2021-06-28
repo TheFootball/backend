@@ -19,6 +19,6 @@ services:
     container_name: onair
     env_file: .env
     ports:
-      - "9000:9000"
+      - "3000:3000"
     volumes:
       - ./:/app
