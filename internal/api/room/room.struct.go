@@ -24,3 +24,8 @@ type room struct {
 	Ongoing     bool   `json:"ongoing"`
 	MemberCount int32  `json:"memberCount"`
 }
+
+type message struct {
+	Type    string `json:"type"`    // chat | command
+	Message string `json:"message"` // string | (command: start)
+}

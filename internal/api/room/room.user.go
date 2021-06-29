@@ -43,7 +43,7 @@ func (u *user) connect(ctx context.Context, r *redis.Client) error {
 	return nil
 }
 
-func (u *user) listen() {
+func (u *user) listenChat() {
 	subscribe := u.room.Channel()
 
 	for {
@@ -73,7 +73,8 @@ func (u *user) disconnect(ctx context.Context) error {
 			return err
 		}
 	}
-
+	r := rds.GetRedis()
+	r.SRem(r.Context(), u.roomId, u.username)
 	u.stopListenChan <- struct{}{}
 	close(u.messageChan)
 

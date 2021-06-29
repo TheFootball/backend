@@ -24,6 +24,10 @@ func IsNil(err error) bool {
 	return err == redis.Nil
 }
 
-func MemberChannel(channel string) string {
-	return fmt.Sprintf("%s:members", channel)
+func MemberChannel(roomId string) string {
+	return fmt.Sprintf("%s:members", roomId)
+}
+
+func ControlChannel(roomId string) string {
+	return fmt.Sprintf("%s:control", roomId)
 }
