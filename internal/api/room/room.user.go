@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
+	rds "github.com/TheFootball/internal/core/redis"
 	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/websocket/v2"
 )
@@ -32,20 +34,21 @@ func newUser(username string, userType string, roomId string, conn *websocket.Co
 }
 
 func (u *user) connect(ctx context.Context, r *redis.Client) error {
-	if _, err := r.SAdd(ctx, u.roomId, u.username).Result(); err != nil {
+	if _, err := r.SAdd(ctx, rds.MemberChannel(u.roomId), u.username).Result(); err != nil {
 		return err
 	}
 
 	pubSub := r.Subscribe(ctx, u.roomId)
 	u.room = pubSub
-
 	return nil
 }
 
 func (u *user) listen() {
+	subscribe := u.room.Channel()
+
 	for {
 		select {
-		case msg, ok := <-u.room.Channel():
+		case msg, ok := <-subscribe:
 			if !ok {
 				return
 			}
@@ -79,8 +82,10 @@ func (u *user) disconnect(ctx context.Context) error {
 
 func (u *user) chat(ctx context.Context, r *redis.Client, msg string) error {
 	chat := chat{
-		Sender:  u.username,
-		Message: msg,
+		Sender:      u.username,
+		Message:     msg,
+		Timestamp:   time.Now().UnixNano(),
+		MessageType: "chat",
 	}
 
 	buf, err := json.Marshal(chat)
