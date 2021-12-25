@@ -7,6 +7,7 @@ import (
 	"time"
 
 	rds "github.com/TheFootball/internal/core/redis"
+	"github.com/TheFootball/internal/shared/exceptions"
 	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/websocket/v2"
 )
@@ -34,6 +35,15 @@ func newUser(username string, userType string, roomId string, conn *websocket.Co
 }
 
 func (u *user) connect(ctx context.Context, r *redis.Client) error {
+	cnt, err := r.SCard(ctx, rds.MemberChannel(u.roomId)).Result()
+	if err != nil {
+		return err
+	}
+
+	if cnt >= 2 {
+		return exceptions.ErrFullRoom
+	}
+
 	if _, err := r.SAdd(ctx, rds.MemberChannel(u.roomId), u.username).Result(); err != nil {
 		return err
 	}
@@ -52,18 +62,40 @@ func (u *user) listenChat() {
 			if !ok {
 				return
 			}
-			chat := chat{}
-			json.Unmarshal([]byte(msg.Payload), &chat)
-			u.conn.WriteJSON(chat)
-
-		case <-u.stopListenChan:
-			fmt.Println(u.username, " stop listening")
-			return
+			notice := notice{}
+			json.Unmarshal([]byte(msg.Payload), &notice)
+			if notice.MessageType == "notice" {
+				u.handleNotice(notice)
+			} else {
+				chat := chat{}
+				json.Unmarshal([]byte(msg.Payload), &chat)
+				u.conn.WriteJSON(chat)
+			}
 		}
 	}
 }
 
+func (u *user) handleNotice(n notice) {
+	r := rds.GetRedis()
+	switch n.Message {
+	case REMOVED:
+		u.conn.WriteJSON(n)
+		u.disconnect(r.Context())
+	}
+}
+
 func (u *user) disconnect(ctx context.Context) error {
+	fmt.Println("DISCONNECT ! ", u)
+	r := rds.GetRedis()
+	if u.userType == "host" {
+		r.Del(r.Context(), rds.MemberChannel(u.roomId))
+		if err := u.notice(r.Context(), r, REMOVED); err != nil {
+			fmt.Println("Notice has error")
+		}
+	} else {
+		r.SRem(r.Context(), rds.MemberChannel(u.roomId), u.username)
+	}
+
 	if u.room != nil {
 		if err := u.room.Unsubscribe(ctx, u.roomId); err != nil {
 			return err
@@ -73,12 +105,26 @@ func (u *user) disconnect(ctx context.Context) error {
 			return err
 		}
 	}
-	r := rds.GetRedis()
-	r.SRem(r.Context(), u.roomId, u.username)
-	u.stopListenChan <- struct{}{}
+
 	close(u.messageChan)
 
 	return nil
+}
+
+func (u *user) notice(ctx context.Context, r *redis.Client, msg string) error {
+	notice := notice{
+		Message:     msg,
+		Timestamp:   time.Now().UnixNano(),
+		MessageType: "notice",
+	}
+
+	buf, err := json.Marshal(notice)
+	if err != nil {
+		return err
+	}
+
+	json := string(buf)
+	return r.Publish(ctx, u.roomId, json).Err()
 }
 
 func (u *user) chat(ctx context.Context, r *redis.Client, msg string) error {

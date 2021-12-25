@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/TheFootball/internal/api/room"
+	"github.com/TheFootball/internal/core/middlewares"
 	"github.com/TheFootball/internal/core/redis"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -10,6 +11,7 @@ import (
 
 func GetFiber() {
 	redis.GetRedis()
+	middlewares.GetStore()
 
 	app := fiber.New()
 	app.Use(cors.New())

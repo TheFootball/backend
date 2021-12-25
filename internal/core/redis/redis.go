@@ -27,7 +27,3 @@ func IsNil(err error) bool {
 func MemberChannel(roomId string) string {
 	return fmt.Sprintf("%s:members", roomId)
 }
-
-func ControlChannel(roomId string) string {
-	return fmt.Sprintf("%s:control", roomId)
-}

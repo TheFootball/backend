@@ -3,8 +3,8 @@ package room
 type chat struct {
 	Message     string `json:"message"`
 	MessageType string `json:"messageType"`
-	Sender      string `json:"sender"`
 	Timestamp   int64  `json:"timestamp"`
+	Sender      string `json:"sender"`
 }
 
 type notice struct {
@@ -28,4 +28,5 @@ type room struct {
 type message struct {
 	Type    string `json:"type"`    // chat | command
 	Message string `json:"message"` // string | (command: start)
+	Winner  string `json:"winner,omitempty"`
 }

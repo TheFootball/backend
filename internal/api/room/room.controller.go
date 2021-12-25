@@ -1,6 +1,7 @@
 package room
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/TheFootball/internal/core/middlewares"
@@ -13,6 +14,9 @@ type controller struct {
 }
 
 func (c *controller) connectRoom(conn *websocket.Conn) {
+	store := middlewares.GetStore()
+	buf, err := store.Storage.Get(conn.Cookies("session_id"))
+	fmt.Println(string(buf))
 	roomId := conn.Params("roomId")
 	username := conn.Query("username")
 
@@ -37,8 +41,7 @@ func (c *controller) connectRoom(conn *websocket.Conn) {
 		)
 
 		if _, buf, err = conn.ReadMessage(); err != nil {
-			log.Println("read:", err)
-			user.stopListenChan <- struct{}{}
+			c.roomService.disconnect(user)
 			break
 		}
 
@@ -50,6 +53,13 @@ func (c *controller) connectRoom(conn *websocket.Conn) {
 }
 
 func (c *controller) createRoom(ctx *fiber.Ctx) error {
+	store := middlewares.GetStore()
+	sess, err := store.Get(ctx)
+
+	if err != nil {
+		panic(err)
+	}
+
 	roomId := ctx.Params("roomId")
 	username := ctx.Query("username", "host")
 
@@ -57,6 +67,13 @@ func (c *controller) createRoom(ctx *fiber.Ctx) error {
 	if err != nil {
 		log.Fatal(err.Error())
 		return ctx.Status(400).JSON(exception{Error: true, Message: err.Error()})
+	}
+
+	fmt.Print(room.RoomId)
+
+	sess.Set("roomId", room.RoomId)
+	if err = sess.Save(); err != nil {
+		panic(err)
 	}
 
 	return ctx.Status(200).JSON(fiber.Map{"message": "room created", "room": room})

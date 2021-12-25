@@ -55,6 +55,10 @@ func (s *service) createSubscriber(username string, roomId string, conn *websock
 	return user, nil
 }
 
+func (s *service) disconnect(u *user) error {
+	return u.disconnect(s.rdb.Context())
+}
+
 func (s *service) messageHandler(u *user, buf *[]byte) error {
 	msg := message{}
 
@@ -66,11 +70,6 @@ func (s *service) messageHandler(u *user, buf *[]byte) error {
 		// 게임 시작하기
 		return nil
 	} else {
-		if msg.Message == "left" || msg.Message == "right" {
-			// 커맨드 처리하기
-			return nil
-		} else {
-			return u.chat(s.rdb.Context(), s.rdb, msg.Message)
-		}
+		return u.chat(s.rdb.Context(), s.rdb, msg.Message)
 	}
 }
